@@ -56,3 +56,37 @@ def test_scan_pdfs_recursive(tmp_path):
     (sub / "nested.pdf").write_bytes(b"")
     result = scan_pdfs(str(tmp_path))
     assert len(result) == 1
+
+
+def test_get_indexed_fingerprints_returns_set(mocker):
+    from ingest import get_indexed_fingerprints
+    collection = mocker.MagicMock()
+    collection.get.return_value = {
+        "metadatas": [
+            {"fingerprint": "abc123"},
+            {"fingerprint": "def456"},
+        ]
+    }
+    result = get_indexed_fingerprints(collection)
+    assert result == {"abc123", "def456"}
+
+
+def test_get_indexed_fingerprints_empty_collection(mocker):
+    from ingest import get_indexed_fingerprints
+    collection = mocker.MagicMock()
+    collection.get.return_value = {"metadatas": []}
+    result = get_indexed_fingerprints(collection)
+    assert result == set()
+
+
+def test_get_indexed_fingerprints_skips_missing_key(mocker):
+    from ingest import get_indexed_fingerprints
+    collection = mocker.MagicMock()
+    collection.get.return_value = {
+        "metadatas": [
+            {"fingerprint": "abc123"},
+            {"other_key": "xyz"},
+        ]
+    }
+    result = get_indexed_fingerprints(collection)
+    assert result == {"abc123"}
