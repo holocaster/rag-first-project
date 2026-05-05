@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_format_sources_empty_nodes(mocker):
     from query import format_sources
     response = mocker.MagicMock()
@@ -36,9 +39,6 @@ def test_format_sources_missing_metadata(mocker):
     response.source_nodes = [node]
     result = format_sources(response)
     assert "unknown" in result
-
-
-import pytest
 
 
 def test_load_index_exits_when_collection_missing(monkeypatch, mocker):
