@@ -69,7 +69,7 @@ def test_load_index_returns_vector_store_index(monkeypatch, mocker):
     mock_index = mocker.MagicMock()
     mocker.patch("query.VectorStoreIndex")
     mocker.patch("query.ChromaVectorStore")
-    mocker.patch("query.OpenAIEmbedding")
+    mocker.patch("query.get_embedding_model")
     mocker.patch("query.VectorStoreIndex.from_vector_store", return_value=mock_index)
 
     result = load_index()

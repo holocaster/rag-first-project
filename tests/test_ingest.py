@@ -165,7 +165,7 @@ def test_ingest_processes_new_pdfs(tmp_path, monkeypatch, mocker, capsys):
     mock_splitter.get_nodes_from_documents.return_value = [mock_node]
     mocker.patch("ingest.SentenceSplitter", return_value=mock_splitter)
 
-    mocker.patch("ingest.OpenAIEmbedding")
+    mocker.patch("ingest.get_embedding_model")
     mocker.patch("ingest.ChromaVectorStore")
     mocker.patch("ingest.StorageContext")
     mocker.patch("ingest.VectorStoreIndex")
@@ -174,3 +174,14 @@ def test_ingest_processes_new_pdfs(tmp_path, monkeypatch, mocker, capsys):
 
     out = capsys.readouterr().out
     assert "doc.pdf" in out
+
+
+def test_ingest_exits_when_voyage_key_missing(tmp_path, monkeypatch):
+    import config
+    from ingest import ingest
+    monkeypatch.setattr(config, "EMBED_PROVIDER", "voyage")
+    monkeypatch.delenv("VOYAGE_API_KEY", raising=False)
+    monkeypatch.setattr(config, "DATA_DIR", str(tmp_path))
+    (tmp_path / "doc.pdf").write_bytes(b"%PDF-1.4")
+    with pytest.raises(SystemExit):
+        ingest()

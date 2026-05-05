@@ -5,11 +5,11 @@ import chromadb
 from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex
 from llama_index.core.query_engine import RetrieverQueryEngine
-from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 import config
+from embeddings import get_embedding_model
 
 load_dotenv()
 
@@ -42,7 +42,7 @@ def load_index():
         print("Index not found. Run ingest.py first.")
         sys.exit(1)
     vector_store = ChromaVectorStore(chroma_collection=collection)
-    embed_model = OpenAIEmbedding(model=config.EMBED_MODEL)
+    embed_model = get_embedding_model()
     return VectorStoreIndex.from_vector_store(vector_store, embed_model=embed_model)
 
 
