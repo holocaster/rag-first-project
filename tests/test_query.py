@@ -36,3 +36,41 @@ def test_format_sources_missing_metadata(mocker):
     response.source_nodes = [node]
     result = format_sources(response)
     assert "unknown" in result
+
+
+import pytest
+
+
+def test_load_index_exits_when_collection_missing(monkeypatch, mocker):
+    import config
+    from query import load_index
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(config, "STORAGE_DIR", "/tmp/no-storage")
+    monkeypatch.setattr(config, "COLLECTION_NAME", "pdf_index")
+
+    mock_client = mocker.MagicMock()
+    mock_client.get_collection.side_effect = Exception("Collection not found")
+    mocker.patch("chromadb.PersistentClient", return_value=mock_client)
+
+    with pytest.raises(SystemExit):
+        load_index()
+
+
+def test_load_index_returns_vector_store_index(monkeypatch, mocker):
+    import config
+    from query import load_index
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+
+    mock_collection = mocker.MagicMock()
+    mock_client = mocker.MagicMock()
+    mock_client.get_collection.return_value = mock_collection
+    mocker.patch("chromadb.PersistentClient", return_value=mock_client)
+
+    mock_index = mocker.MagicMock()
+    mocker.patch("query.VectorStoreIndex")
+    mocker.patch("query.ChromaVectorStore")
+    mocker.patch("query.OpenAIEmbedding")
+    mocker.patch("query.VectorStoreIndex.from_vector_store", return_value=mock_index)
+
+    result = load_index()
+    assert result is mock_index

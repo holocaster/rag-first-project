@@ -35,11 +35,21 @@ def format_sources(response) -> str:
 
 
 def load_index():
-    pass  # implemented in Task 8
+    chroma_client = chromadb.PersistentClient(path=config.STORAGE_DIR)
+    try:
+        collection = chroma_client.get_collection(config.COLLECTION_NAME)
+    except Exception:
+        print("Index not found. Run ingest.py first.")
+        sys.exit(1)
+    vector_store = ChromaVectorStore(chroma_collection=collection)
+    embed_model = OpenAIEmbedding(model=config.EMBED_MODEL)
+    return VectorStoreIndex.from_vector_store(vector_store, embed_model=embed_model)
 
 
 def build_query_engine(index):
-    pass  # implemented in Task 8
+    llm = OpenAI(model=config.LLM_MODEL)
+    retriever = index.as_retriever(similarity_top_k=config.TOP_K)
+    return RetrieverQueryEngine.from_args(retriever=retriever, llm=llm)
 
 
 def run_repl(query_engine) -> None:
