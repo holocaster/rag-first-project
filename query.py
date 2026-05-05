@@ -53,11 +53,30 @@ def build_query_engine(index):
 
 
 def run_repl(query_engine) -> None:
-    pass  # implemented in Task 9
+    print("Ask questions about your PDFs. Type 'quit' to exit.\n")
+    while True:
+        try:
+            question = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if not question:
+            continue
+        if question.lower() in ("quit", "exit"):
+            break
+        response = query_engine.query(question)
+        print(response)
+        sources = format_sources(response)
+        if sources:
+            print(sources)
+        print()
 
 
 def main() -> None:
-    pass  # implemented in Task 9
+    require_openai_key()
+    index = load_index()
+    engine = build_query_engine(index)
+    run_repl(engine)
 
 
 if __name__ == "__main__":

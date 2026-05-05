@@ -74,3 +74,41 @@ def test_load_index_returns_vector_store_index(monkeypatch, mocker):
 
     result = load_index()
     assert result is mock_index
+
+
+def test_run_repl_exits_on_quit(mocker):
+    from query import run_repl
+    engine = mocker.MagicMock()
+    mocker.patch("builtins.input", side_effect=["quit"])
+    run_repl(engine)
+    engine.query.assert_not_called()
+
+
+def test_run_repl_exits_on_eof(mocker):
+    from query import run_repl
+    engine = mocker.MagicMock()
+    mocker.patch("builtins.input", side_effect=EOFError)
+    run_repl(engine)
+    engine.query.assert_not_called()
+
+
+def test_run_repl_queries_engine_and_prints_answer(mocker, capsys):
+    from query import run_repl
+    engine = mocker.MagicMock()
+    response = mocker.MagicMock()
+    response.__str__ = lambda self: "The answer is 42."
+    response.source_nodes = []
+    engine.query.return_value = response
+    mocker.patch("builtins.input", side_effect=["what is the answer?", "quit"])
+    run_repl(engine)
+    engine.query.assert_called_once_with("what is the answer?")
+    out = capsys.readouterr().out
+    assert "The answer is 42." in out
+
+
+def test_run_repl_skips_empty_input(mocker):
+    from query import run_repl
+    engine = mocker.MagicMock()
+    mocker.patch("builtins.input", side_effect=["", "  ", "exit"])
+    run_repl(engine)
+    engine.query.assert_not_called()
