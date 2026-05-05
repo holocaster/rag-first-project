@@ -90,3 +90,17 @@ def test_get_indexed_fingerprints_skips_missing_key(mocker):
     }
     result = get_indexed_fingerprints(collection)
     assert result == {"abc123"}
+
+
+def test_get_indexed_fingerprints_skips_none_entries(mocker):
+    from ingest import get_indexed_fingerprints
+    collection = mocker.MagicMock()
+    collection.get.return_value = {
+        "metadatas": [
+            {"fingerprint": "abc123"},
+            None,
+            {"fingerprint": "def456"},
+        ]
+    }
+    result = get_indexed_fingerprints(collection)
+    assert result == {"abc123", "def456"}

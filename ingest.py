@@ -34,10 +34,10 @@ def scan_pdfs(data_dir: str) -> list[Path]:
 
 
 def get_indexed_fingerprints(collection) -> set[str]:
-    results = collection.get(include=["metadatas"])
-    if not results["metadatas"]:
+    metadatas = collection.get(include=["metadatas"]).get("metadatas")
+    if not metadatas:
         return set()
-    return {m["fingerprint"] for m in results["metadatas"] if m and "fingerprint" in m}
+    return {m["fingerprint"] for m in metadatas if m and "fingerprint" in m}
 
 
 def ingest() -> None:
