@@ -1,7 +1,9 @@
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 64
 TOP_K = 5
+EMBED_PROVIDER = "openai"  # "openai" | "voyage"
 EMBED_MODEL = "text-embedding-3-small"
+VOYAGE_EMBED_MODEL = "voyage-3"
 LLM_MODEL = "gpt-4o-mini"
 DATA_DIR = "data"
 STORAGE_DIR = "storage"

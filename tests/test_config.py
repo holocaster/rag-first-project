@@ -24,3 +24,9 @@ def test_storage_dir():
 
 def test_collection_name():
     assert config.COLLECTION_NAME == "pdf_index"
+
+def test_embed_provider():
+    assert config.EMBED_PROVIDER == "openai"
+
+def test_voyage_embed_model():
+    assert config.VOYAGE_EMBED_MODEL == "voyage-3"

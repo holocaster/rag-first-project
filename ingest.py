@@ -7,20 +7,28 @@ import chromadb
 from dotenv import load_dotenv
 from llama_index.core import SimpleDirectoryReader, StorageContext, VectorStoreIndex
 from llama_index.core.node_parser import SentenceSplitter
-from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 import config
+from embeddings import get_embedding_model
 
 load_dotenv()
 
 
-def require_openai_key() -> str:
-    key = os.getenv("OPENAI_API_KEY")
-    if not key:
-        print("Error: OPENAI_API_KEY not set. Add it to .env or export it.")
-        sys.exit(1)
-    return key
+def require_api_key() -> str:
+    if config.EMBED_PROVIDER == "openai":
+        key = os.getenv("OPENAI_API_KEY")
+        if not key:
+            print("Error: OPENAI_API_KEY not set. Add it to .env or export it.")
+            sys.exit(1)
+        return key
+    elif config.EMBED_PROVIDER == "voyage":
+        key = os.getenv("VOYAGE_API_KEY")
+        if not key:
+            print("Error: VOYAGE_API_KEY not set. Add it to .env or export it.")
+            sys.exit(1)
+        return key
+    raise ValueError(f"Unknown EMBED_PROVIDER: {config.EMBED_PROVIDER!r}")
 
 
 def fingerprint(path: Path) -> str:
@@ -41,7 +49,7 @@ def get_indexed_fingerprints(collection) -> set[str]:
 
 
 def ingest() -> None:
-    require_openai_key()
+    require_api_key()
 
     pdf_files = scan_pdfs(config.DATA_DIR)
     if not pdf_files:
@@ -63,7 +71,7 @@ def ingest() -> None:
 
     print(f"Indexing {len(to_process)} new file(s), skipping {skipped}...")
 
-    embed_model = OpenAIEmbedding(model=config.EMBED_MODEL)
+    embed_model = get_embedding_model()
     vector_store = ChromaVectorStore(chroma_collection=collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     splitter = SentenceSplitter(chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP)
