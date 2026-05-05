@@ -104,3 +104,73 @@ def test_get_indexed_fingerprints_skips_none_entries(mocker):
     }
     result = get_indexed_fingerprints(collection)
     assert result == {"abc123", "def456"}
+
+
+def test_ingest_exits_when_no_pdfs(tmp_path, monkeypatch):
+    import config
+    from ingest import ingest
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(config, "DATA_DIR", str(tmp_path))
+    with pytest.raises(SystemExit):
+        ingest()
+
+
+def test_ingest_skips_all_already_indexed(tmp_path, monkeypatch, mocker, capsys):
+    import config
+    from ingest import ingest, fingerprint
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(config, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(config, "STORAGE_DIR", str(tmp_path / "storage"))
+
+    pdf = tmp_path / "doc.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    fp = fingerprint(pdf)
+
+    mock_col = mocker.MagicMock()
+    mock_col.get.return_value = {"metadatas": [{"fingerprint": fp}]}
+    mock_client = mocker.MagicMock()
+    mock_client.get_or_create_collection.return_value = mock_col
+    mocker.patch("chromadb.PersistentClient", return_value=mock_client)
+
+    ingest()
+
+    out = capsys.readouterr().out
+    assert "nothing to do" in out.lower() or "already indexed" in out.lower()
+
+
+def test_ingest_processes_new_pdfs(tmp_path, monkeypatch, mocker, capsys):
+    import config
+    from ingest import ingest
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(config, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(config, "STORAGE_DIR", str(tmp_path / "storage"))
+
+    pdf = tmp_path / "doc.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+
+    mock_col = mocker.MagicMock()
+    mock_col.get.return_value = {"metadatas": []}
+    mock_client = mocker.MagicMock()
+    mock_client.get_or_create_collection.return_value = mock_col
+    mocker.patch("chromadb.PersistentClient", return_value=mock_client)
+
+    mock_docs = [mocker.MagicMock()]
+    mock_reader = mocker.MagicMock()
+    mock_reader.load_data.return_value = mock_docs
+    mocker.patch("ingest.SimpleDirectoryReader", return_value=mock_reader)
+
+    mock_node = mocker.MagicMock()
+    mock_node.metadata = {}
+    mock_splitter = mocker.MagicMock()
+    mock_splitter.get_nodes_from_documents.return_value = [mock_node]
+    mocker.patch("ingest.SentenceSplitter", return_value=mock_splitter)
+
+    mocker.patch("ingest.OpenAIEmbedding")
+    mocker.patch("ingest.ChromaVectorStore")
+    mocker.patch("ingest.StorageContext")
+    mocker.patch("ingest.VectorStoreIndex")
+
+    ingest()
+
+    out = capsys.readouterr().out
+    assert "doc.pdf" in out

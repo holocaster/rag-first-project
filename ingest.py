@@ -41,7 +41,48 @@ def get_indexed_fingerprints(collection) -> set[str]:
 
 
 def ingest() -> None:
-    pass  # implemented in Task 6
+    require_openai_key()
+
+    pdf_files = scan_pdfs(config.DATA_DIR)
+    if not pdf_files:
+        print(f"No PDF files found in {config.DATA_DIR}/")
+        sys.exit(0)
+
+    print(f"Found {len(pdf_files)} PDF file(s)")
+
+    chroma_client = chromadb.PersistentClient(path=config.STORAGE_DIR)
+    collection = chroma_client.get_or_create_collection(config.COLLECTION_NAME)
+    indexed = get_indexed_fingerprints(collection)
+
+    to_process = [p for p in pdf_files if fingerprint(p) not in indexed]
+    skipped = len(pdf_files) - len(to_process)
+
+    if not to_process:
+        print(f"All {skipped} file(s) already indexed. Nothing to do.")
+        return
+
+    print(f"Indexing {len(to_process)} new file(s), skipping {skipped}...")
+
+    embed_model = OpenAIEmbedding(model=config.EMBED_MODEL)
+    vector_store = ChromaVectorStore(chroma_collection=collection)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    splitter = SentenceSplitter(chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP)
+
+    total_chunks = 0
+    for pdf in to_process:
+        try:
+            docs = SimpleDirectoryReader(input_files=[str(pdf)]).load_data()
+            nodes = splitter.get_nodes_from_documents(docs)
+            fp = fingerprint(pdf)
+            for node in nodes:
+                node.metadata["fingerprint"] = fp
+            VectorStoreIndex(nodes, storage_context=storage_context, embed_model=embed_model)
+            total_chunks += len(nodes)
+            print(f"  {pdf.name}: {len(nodes)} chunks")
+        except Exception as e:
+            print(f"  Warning: could not process {pdf.name}: {e}")
+
+    print(f"\nDone. {len(to_process)} file(s) indexed, {total_chunks} total chunks stored.")
 
 
 if __name__ == "__main__":
